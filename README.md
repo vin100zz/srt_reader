@@ -73,8 +73,8 @@ Si l'appli dit qu'il manque une autorisation, lance depuis le PC :
 
 1. Ouvre **SRT Reader** sur la TV. L'écran affiche une adresse (ex. `http://192.168.1.42:8080`)
    et un QR code : ouvre-la sur le téléphone, connecté au même réseau.
-2. Sur le téléphone, **Choisir un .srt**, ou cherche-le directement dans
-   **Trouver des sous-titres anglais** (voir plus bas).
+2. Sur le téléphone, onglet **Sous-titres** : **Choisir un .srt**, ou cherche-le directement dans
+   **Trouver des sous-titres anglais** (voir plus bas). La page passe ensuite sur l'onglet **Lecture**.
 3. Lance le film dans Netflix, Canal+… et **coupe leurs propres sous-titres**.
 4. Sur le téléphone, **Lecture**. Si « Lecture/Pause pilote aussi l'appli vidéo » est coché,
    le film démarre ou s'arrête en même temps que les sous-titres.
@@ -85,7 +85,7 @@ Si l'appli dit qu'il manque une autorisation, lance depuis le PC :
 Netflix), la page affiche « Synchro automatique avec Netflix ». Les sous-titres suivent alors
 tout seuls la lecture, les pauses et les sauts faits à la télécommande : il ne reste qu'à recaler
 une fois avec « C'est dit maintenant ». Sinon, l'appli garde sa propre horloge (« Synchro manuelle »).
-Le suivi peut être coupé dans « Affichage sur la TV ».
+Le suivi peut être coupé dans l'onglet **Réglages**.
 
 Ensuite :
 
@@ -106,11 +106,12 @@ et les charger directement sur la TV.
 
 1. Crée un compte gratuit sur opensubtitles.com, puis une **clé d'API** dans la rubrique
    « API consumers » de ton profil.
-2. Sur le téléphone, en bas de la page, **Compte OpenSubtitles** : colle la clé, puis
+2. Sur le téléphone, onglet **Réglages**, **Compte OpenSubtitles** : colle la clé, puis
    **Enregistrer sur la TV**. L'identifiant et le mot de passe sont facultatifs : ils augmentent
-   le nombre de téléchargements autorisés par jour.
-3. **Trouver des sous-titres anglais** : tape le titre (et la saison et l'épisode pour une série),
-   puis touche le résultat voulu. Il est téléchargé et chargé tout de suite.
+   le nombre de téléchargements autorisés par jour. Une fois enregistré, le compte se replie en
+   une ligne (« Modifier » pour le changer).
+3. Onglet **Sous-titres**, **Trouver des sous-titres anglais** : tape le titre (et la saison et
+   l'épisode pour une série), puis touche le résultat voulu. Il est téléchargé et chargé tout de suite.
 
 Les résultats affichent la cadence (i/s), le nombre de téléchargements et ces repères :
 **Copie Netflix** (fait à partir de la version Netflix, donc calé dessus, et placé en tête
