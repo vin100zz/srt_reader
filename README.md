@@ -12,7 +12,7 @@ Affiche un fichier de sous-titres `.srt` par-dessus n'importe quelle appli vidé
 
 | Dossier / fichier | Rôle |
 |---|---|
-| `core/` | Logique en Kotlin pur : lecture des `.srt`, horloge et recalage, serveur web, tests |
+| `core/` | Logique en Kotlin pur : lecture des `.srt`, horloge et recalage, serveur web, client OpenSubtitles, tests |
 | `core/src/main/resources/web/index.html` | La page de contrôle (HTML/CSS/JS, un seul fichier) |
 | `app/` | L'appli Google TV : écran d'accueil, service, fenêtre de sous-titres |
 | `build.cmd` | Lance les tests et compile `dist\srt-reader.apk` |
@@ -73,7 +73,8 @@ Si l'appli dit qu'il manque une autorisation, lance depuis le PC :
 
 1. Ouvre **SRT Reader** sur la TV. L'écran affiche une adresse (ex. `http://192.168.1.42:8080`)
    et un QR code : ouvre-la sur le téléphone, connecté au même réseau.
-2. Sur le téléphone, **Choisir un .srt**.
+2. Sur le téléphone, **Choisir un .srt**, ou cherche-le directement dans
+   **Trouver des sous-titres anglais** (voir plus bas).
 3. Lance le film dans Netflix, Canal+… et **coupe leurs propres sous-titres**.
 4. Sur le téléphone, **Lecture**. Si « Lecture/Pause pilote aussi l'appli vidéo » est coché,
    le film démarre ou s'arrête en même temps que les sous-titres.
@@ -98,6 +99,28 @@ Ensuite :
 
 L'état (fichier, décalage, vitesse, réglages) est conservé si la TV redémarre l'appli.
 
+## Trouver des sous-titres sur OpenSubtitles
+
+La page du téléphone peut chercher des sous-titres anglais sur [OpenSubtitles](https://www.opensubtitles.com)
+et les charger directement sur la TV.
+
+1. Crée un compte gratuit sur opensubtitles.com, puis une **clé d'API** dans la rubrique
+   « API consumers » de ton profil.
+2. Sur le téléphone, en bas de la page, **Compte OpenSubtitles** : colle la clé, puis
+   **Enregistrer sur la TV**. L'identifiant et le mot de passe sont facultatifs : ils augmentent
+   le nombre de téléchargements autorisés par jour.
+3. **Trouver des sous-titres anglais** : tape le titre (et la saison et l'épisode pour une série),
+   puis touche le résultat voulu. Il est téléchargé et chargé tout de suite.
+
+Les résultats affichent la cadence (i/s), le nombre de téléchargements et ces repères :
+**Copie Netflix** (fait à partir de la version Netflix, donc calé dessus, et placé en tête
+quand tu regardes Netflix), **Malentendants** (bruits décrits entre crochets) et
+**Traduction auto** (placée en dernier). Si l'appli vidéo publie le titre en cours (Canal+ ?),
+il pré-remplit la recherche ; Netflix ne le publie pas.
+
+La clé, l'identifiant et le mot de passe sont gardés dans les données privées de l'appli sur la
+TV, et transmis du téléphone à la TV sur le réseau local, sans chiffrement.
+
 ## Tester ou modifier la page sur le PC
 
 ```
@@ -106,13 +129,15 @@ dev.cmd
 
 puis ouvre <http://localhost:8080>. La page est relue à chaque rechargement : modifie
 `core/src/main/resources/web/index.html` et recharge le navigateur. Le texte qui serait affiché
-sur la TV s'écrit dans la console.
+sur la TV s'écrit dans la console. La clé OpenSubtitles saisie en test est gardée dans
+`core/build/dev-data`.
 
 ## Compatibilité
 
 - **Netflix** (Google TV Streamer) : sous-titres au-dessus du film, Lecture/Pause depuis le
   téléphone et position de lecture publiée vérifiés.
-- **Canal+, Prime Video** : pas encore testés. Pour voir si une appli publie sa position, lance
+- **Canal+** : position de lecture publiée et suivie automatiquement (vérifié).
+- **Prime Video** : pas encore testé. Pour voir si une appli publie sa position, lance
   un film puis :
 
   ```

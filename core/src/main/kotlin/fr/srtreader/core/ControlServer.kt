@@ -20,9 +20,18 @@ import java.util.concurrent.Executors
  *   POST /api/load      corps = contenu du .srt (UTF-8), en-tête X-File-Name
  *   POST /api/cmd?a=... commande (play, pause, seek, nudge, sync...)
  *
+ *   GET  /api/subs/status            clé OpenSubtitles enregistrée ?
+ *   POST /api/subs/config            corps (formulaire) = key, user, password
+ *   GET  /api/subs/search?q=&season=&episode=
+ *   POST /api/subs/download?file=    télécharge et charge le sous-titre
+ *
  * [webRoot] permet, en développement, de relire la page depuis les sources à chaque requête.
  */
-class ControlServer(private val controller: Controller, private val webRoot: File? = null) {
+class ControlServer(
+    private val controller: Controller,
+    private val webRoot: File? = null,
+    private val subtitles: SubtitleSearch? = null,
+) {
     private val pool = Executors.newCachedThreadPool { r -> Thread(r, "srt-http").apply { isDaemon = true } }
 
     @Volatile
@@ -93,6 +102,8 @@ class ControlServer(private val controller: Controller, private val webRoot: Fil
                     route(method, path, query, headers, body)
                 } catch (e: IllegalArgumentException) {
                     error(400, e.message ?: "Requête invalide")
+                } catch (e: OpenSubtitlesException) {
+                    error(502, e.message ?: "Erreur OpenSubtitles")
                 } catch (e: Exception) {
                     error(500, e.toString())
                 }
@@ -122,7 +133,32 @@ class ControlServer(private val controller: Controller, private val webRoot: Fil
             controller.handle(query["a"].orEmpty(), query)
             json(controller.stateJson())
         }
+        path.startsWith("/api/subs/") -> subtitlesRoute(method, path, query, body)
         else -> error(404, "Introuvable")
+    }
+
+    private fun subtitlesRoute(method: String, path: String, query: Map<String, String>, body: ByteArray): Response {
+        val subs = subtitles ?: return error(404, "Recherche de sous-titres indisponible")
+        return when {
+            method == "GET" && path == "/api/subs/status" -> json(subs.statusJson())
+            method == "POST" && path == "/api/subs/config" -> {
+                val form = parseQuery(String(body, Charsets.UTF_8))
+                subs.configure(form["key"].orEmpty(), form["user"].orEmpty(), form["password"].orEmpty())
+                json(subs.statusJson())
+            }
+            method == "GET" && path == "/api/subs/search" -> {
+                val netflix = controller.followingSource()?.contains("netflix", ignoreCase = true) == true
+                json(subs.searchJson(query["q"].orEmpty(), query["season"]?.toIntOrNull(), query["episode"]?.toIntOrNull(), netflix))
+            }
+            method == "POST" && path == "/api/subs/download" -> {
+                val fileId = query["file"]?.toLongOrNull() ?: throw IllegalArgumentException("Sous-titre inconnu")
+                val download = subs.download(fileId)
+                val note = download.remaining?.let { " · encore $it téléchargements aujourd'hui" }.orEmpty()
+                controller.load(download.fileName, download.content, note)
+                json(controller.stateJson())
+            }
+            else -> error(404, "Introuvable")
+        }
     }
 
     private fun page(): ByteArray {
@@ -157,6 +193,7 @@ class ControlServer(private val controller: Controller, private val webRoot: Fil
         400 -> "Bad Request"
         404 -> "Not Found"
         413 -> "Payload Too Large"
+        502 -> "Bad Gateway"
         else -> "Internal Server Error"
     }
 

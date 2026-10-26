@@ -33,6 +33,7 @@ import fr.srtreader.core.ControlServer
 import fr.srtreader.core.Controller
 import fr.srtreader.core.DisplaySettings
 import fr.srtreader.core.Host
+import fr.srtreader.core.SubtitleSearch
 import java.io.IOException
 import kotlin.concurrent.thread
 
@@ -85,7 +86,7 @@ class OverlayService : Service() {
         running = true
         thread(name = "srt-http-start") {
             try {
-                val s = ControlServer(controller)
+                val s = ControlServer(controller, subtitles = SubtitleSearch(filesDir))
                 val p = s.start(PORT)
                 if (running) {
                     server = s

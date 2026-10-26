@@ -48,16 +48,21 @@ class Controller(private val dataDir: File?, private val host: Host, now: () -> 
         restore()
     }
 
+    /** [note] complète le message affiché sur le téléphone. */
     @Synchronized
-    fun load(name: String, content: String) {
+    fun load(name: String, content: String, note: String = "") {
         val cues = SrtParser.parse(content)
         require(cues.isNotEmpty()) { "Aucune réplique trouvée : est-ce bien un fichier .srt ?" }
         engine.load(cues)
         fileName = name
         dataDir?.let { File(it, SRT_FILE).writeText(content) }
-        say("${cues.size} répliques chargées")
+        say("${cues.size} répliques chargées$note")
         save()
     }
+
+    /** Nom de l'appli vidéo suivie (Netflix...), ou null. */
+    @Synchronized
+    fun followingSource(): String? = engine.external?.source
 
     @Synchronized
     fun handle(action: String, params: Map<String, String>) {
@@ -131,6 +136,7 @@ class Controller(private val dataDir: File?, private val host: Host, now: () -> 
             .put("count", cues.size)
             .put("playing", engine.playing)
             .put("following", engine.external?.source)
+            .put("nowPlaying", engine.external?.title)
             .put("mediaAccess", host.mediaAccessGranted())
             .put("position", t)
             .put("offset", engine.offsetMs)

@@ -16,7 +16,10 @@ fun main(args: Array<String>) {
 
     // Relit la page depuis les sources : il suffit de recharger le navigateur après une modification
     val webRoot = File("src/main/resources/web").takeIf { it.isDirectory }
-    val port = ControlServer(controller, webRoot).start(8080)
+    // Clé OpenSubtitles gardée dans core/build/dev-data ; SRT_OPENSUBTITLES_URL pour viser un faux serveur
+    val api = OpenSubtitles(System.getenv("SRT_OPENSUBTITLES_URL") ?: OpenSubtitles.DEFAULT_URL)
+    val subtitles = SubtitleSearch(File("build/dev-data").apply { mkdirs() }, api)
+    val port = ControlServer(controller, webRoot, subtitles).start(8080)
     println("Page de controle : http://localhost:$port")
 
     var shown: String? = null

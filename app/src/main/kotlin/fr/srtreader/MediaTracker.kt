@@ -2,6 +2,7 @@ package fr.srtreader
 
 import android.content.ComponentName
 import android.content.Context
+import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
@@ -30,6 +31,7 @@ class MediaTracker(private val context: Context, private val onChange: (External
 
     private val callback = object : MediaController.Callback() {
         override fun onPlaybackStateChanged(state: PlaybackState?) = publish()
+        override fun onMetadataChanged(metadata: MediaMetadata?) = publish()
         override fun onSessionDestroyed() = refresh()
     }
     private val sessionsListener = MediaSessionManager.OnActiveSessionsChangedListener { attach(it.orEmpty()) }
@@ -79,6 +81,9 @@ class MediaTracker(private val context: Context, private val onChange: (External
                 positionMs = state.position,
                 updatedAt = state.lastPositionUpdateTime,
                 speed = state.playbackSpeed,
+                title = controller.metadata?.let {
+                    it.getString(MediaMetadata.METADATA_KEY_TITLE) ?: it.getString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE)
+                },
             )
         )
     }

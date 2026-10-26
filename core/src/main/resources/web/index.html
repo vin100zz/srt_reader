@@ -102,6 +102,25 @@
   .goto input { flex: 1; min-width: 0; }
   .goto button { flex: none; padding: 10px 18px; }
 
+  .find input, .account input {
+    width: 100%; min-width: 0; min-height: 48px; padding: 10px 12px;
+    border: 1px solid var(--line); border-radius: 12px; background: var(--bg);
+  }
+  .find-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; margin-top: 8px; }
+  .find-row button { padding: 10px 18px; }
+  .sub { display: grid; grid-template-columns: 1fr; justify-items: start; gap: 4px; padding: 12px; text-align: left; }
+  .sub-title { font-weight: 600; }
+  .sub-release { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+  .tag { padding: 2px 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg); font-size: 12px; color: var(--muted); }
+  .tag.nf { color: #ff9a8f; border-color: rgba(229, 9, 20, .55); }
+  .tag.warn { color: var(--bad); }
+  .sub.loading { opacity: .6; }
+  .sub.chosen { border-color: var(--ok); }
+  .field { display: grid; gap: 4px; margin-bottom: 12px; font-size: 14px; }
+  .account button { width: 100%; }
+  a { color: var(--accent); }
+
   .slider { display: grid; gap: 4px; margin: 0 0 14px; }
   .slider span { display: flex; justify-content: space-between; }
   input[type=range] { width: 100%; height: 32px; accent-color: var(--accent); }
@@ -132,6 +151,20 @@
       <span id="fileMeta" class="muted">Choisis un fichier .srt pour commencer</span>
     </div>
     <label class="btn"><span id="pickText">Choisir un .srt</span><input id="fileInput" type="file" accept=".srt,.txt,text/plain,application/x-subrip" hidden></label>
+  </section>
+
+  <section>
+    <h2>Trouver des sous-titres anglais</h2>
+    <form id="findForm" class="find">
+      <input id="findTitle" type="search" placeholder="Titre du film ou de la série" autocomplete="off" enterkeyhint="search" aria-label="Titre">
+      <div class="find-row">
+        <input id="findSeason" inputmode="numeric" placeholder="Saison" autocomplete="off" aria-label="Saison">
+        <input id="findEpisode" inputmode="numeric" placeholder="Épisode" autocomplete="off" aria-label="Épisode">
+        <button>Chercher</button>
+      </div>
+    </form>
+    <p id="findSetup" class="hint" hidden>Pour chercher, enregistre d'abord ta clé d'API dans « Compte OpenSubtitles », en bas de la page.</p>
+    <div id="findResults" class="cues"></div>
   </section>
 
   <section class="needs-file">
@@ -204,6 +237,18 @@
     <label class="switch"><input type="checkbox" id="mediaKeys" data-key="mediaKeys"><span>Lecture/Pause pilote aussi l'appli vidéo</span></label>
     <label class="switch"><input type="checkbox" id="follow" data-key="follow"><span>Suivre automatiquement l'appli vidéo</span></label>
     <p id="accessHint" class="hint" hidden>Synchro automatique indisponible : l'appli n'a pas accès aux notifications de la TV. Relance <b>install.cmd</b> depuis le PC.</p>
+  </section>
+
+  <section id="account">
+    <h2>Compte OpenSubtitles</h2>
+    <p id="accountStatus" class="hint" style="margin: 0 0 12px">…</p>
+    <form id="accountForm" class="account">
+      <label class="field"><span>Clé d'API</span><input id="osKey" autocomplete="off" spellcheck="false"></label>
+      <label class="field"><span>Identifiant (facultatif)</span><input id="osUser" autocomplete="username" spellcheck="false"></label>
+      <label class="field"><span>Mot de passe (facultatif)</span><input id="osPass" type="password" autocomplete="current-password"></label>
+      <button>Enregistrer sur la TV</button>
+    </form>
+    <p class="hint">Crée un compte gratuit sur <a href="https://www.opensubtitles.com" target="_blank" rel="noopener">opensubtitles.com</a>, puis une clé dans la rubrique « API consumers » de ton profil. L'identifiant et le mot de passe augmentent le nombre de téléchargements par jour. Tout est gardé sur la TV.</p>
   </section>
 
   <footer class="muted">Pense à couper les sous-titres de Netflix ou Canal+, sinon ils se superposent aux tiens.</footer>
@@ -296,6 +341,7 @@ function render(s) {
   $('#followHint').textContent = s.following
     ? `Les pauses et les sauts faits dans ${s.following} sont suivis automatiquement.` : '';
   $('#accessHint').hidden = s.mediaAccess || !s.settings.follow;
+  prefillTitle(s.nowPlaying);
   $('#playBtn').innerHTML = s.playing ? '❚❚&nbsp; Pause' : '▶&nbsp; Lecture';
   $('#now').innerHTML = !s.settings.visible ? '<span class="muted">Sous-titres masqués</span>'
     : s.currentText ? rich(s.currentText) : '<span class="muted">—</span>';
@@ -483,9 +529,111 @@ document.querySelectorAll('input[type=checkbox]').forEach((el) => {
   });
 });
 
+// ---------- OpenSubtitles ----------
+let subsConfigured = false;
+let prefilled = null;
+
+// Pré-remplit avec le titre publié par l'appli vidéo (Canal+...), une fois par titre
+function prefillTitle(title) {
+  const input = $('#findTitle');
+  if (!title || title === prefilled || input.value || document.activeElement === input) return;
+  prefilled = title;
+  input.value = title;
+}
+
+function renderAccount(st) {
+  subsConfigured = st.configured;
+  $('#accountStatus').textContent = !st.configured ? 'Aucune clé enregistrée sur la TV.'
+    : st.username ? `Clé enregistrée, compte ${st.username}.` : 'Clé enregistrée, sans compte.';
+  $('#osKey').placeholder = st.configured ? 'Enregistrée (laisse vide pour la garder)' : 'Colle ta clé ici';
+  if (document.activeElement !== $('#osUser')) $('#osUser').value = st.username || '';
+  $('#osPass').placeholder = st.username ? 'Enregistré (laisse vide pour le garder)' : '';
+  if (st.configured) $('#findSetup').hidden = true;
+}
+
+async function loadAccount() {
+  try {
+    renderAccount(await api('/api/subs/status'));
+  } catch {
+    // TV injoignable : l'indicateur de connexion le signale déjà
+  }
+}
+
+$('#accountForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const body = new URLSearchParams({ key: $('#osKey').value.trim(), user: $('#osUser').value.trim(), password: $('#osPass').value });
+  try {
+    renderAccount(await api('/api/subs/config', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body }));
+    $('#osKey').value = '';
+    $('#osPass').value = '';
+    document.activeElement.blur();
+    toast('Compte OpenSubtitles enregistré sur la TV');
+  } catch (err) {
+    toast(err.message, true);
+  }
+});
+
+function subButton(r) {
+  const tags = [];
+  if (r.netflix) tags.push('<span class="tag nf">Copie Netflix</span>');
+  if (r.fps) tags.push(`<span class="tag">${String(+r.fps.toFixed(3)).replace('.', ',')} i/s</span>`);
+  tags.push(`<span class="tag">${r.downloads.toLocaleString('fr-FR')} téléch.</span>`);
+  if (r.hi) tags.push('<span class="tag">Malentendants</span>');
+  if (r.auto) tags.push('<span class="tag warn">Traduction auto</span>');
+  return `<button class="sub" data-file="${r.file}"><span class="sub-title">${esc(r.title)}</span>`
+    + `<span class="sub-release">${esc(r.release)}</span><span class="tags">${tags.join('')}</span></button>`;
+}
+
+$('#findForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const q = $('#findTitle').value.trim();
+  if (!q) return toast('Tape un titre', true);
+  if (!subsConfigured) {
+    $('#findSetup').hidden = false;
+    return;
+  }
+  const params = new URLSearchParams({ q });
+  const season = $('#findSeason').value.trim();
+  const episode = $('#findEpisode').value.trim();
+  if (season) params.set('season', season);
+  if (episode) params.set('episode', episode);
+  document.activeElement.blur();
+  const box = $('#findResults');
+  box.innerHTML = '<p class="hint">Recherche…</p>';
+  try {
+    const hits = await api('/api/subs/search?' + params);
+    box.innerHTML = hits.length ? hits.map(subButton).join('')
+      : '<p class="hint">Aucun sous-titre anglais trouvé. Essaie le titre original ou anglais.</p>';
+  } catch (err) {
+    box.innerHTML = '';
+    toast(err.message, true);
+  }
+});
+
+$('#findResults').addEventListener('click', async (e) => {
+  const b = e.target.closest('.sub');
+  if (!b || b.disabled) return;
+  buzz();
+  const all = document.querySelectorAll('#findResults .sub');
+  all.forEach((x) => { x.disabled = true; });
+  b.classList.add('loading');
+  try {
+    generation++;
+    render(await api('/api/subs/download?file=' + b.dataset.file, { method: 'POST' }));
+    all.forEach((x) => x.classList.remove('chosen'));
+    b.classList.add('chosen');
+  } catch (err) {
+    toast(err.message, true);
+  } finally {
+    b.classList.remove('loading');
+    all.forEach((x) => { x.disabled = false; });
+  }
+});
+
 setInterval(poll, 400);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
 poll();
+loadAccount();
 </script>
 </body>
 </html>

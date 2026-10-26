@@ -1,5 +1,9 @@
 package fr.srtreader.core
 
+import java.nio.ByteBuffer
+import java.nio.charset.CharacterCodingException
+import java.nio.charset.Charset
+import java.nio.charset.CodingErrorAction
 import java.text.Normalizer
 
 /** Une réplique du fichier SRT. [index] est sa position dans la liste triée. */
@@ -59,6 +63,25 @@ private val marks = Regex("\\p{M}+")
 private val spaces = Regex("\\s+")
 
 fun stripTags(text: String): String = tags.replace(text, "")
+
+/** Décode un fichier texte : UTF-16 (avec BOM), UTF-8, sinon Windows-1252 (vieux fichiers « ANSI »). */
+fun decodeText(bytes: ByteArray): String {
+    if (bytes.size >= 2 && bytes[0] == 0xFF.toByte() && bytes[1] == 0xFE.toByte()) {
+        return String(bytes, 2, bytes.size - 2, Charsets.UTF_16LE)
+    }
+    if (bytes.size >= 2 && bytes[0] == 0xFE.toByte() && bytes[1] == 0xFF.toByte()) {
+        return String(bytes, 2, bytes.size - 2, Charsets.UTF_16BE)
+    }
+    return try {
+        Charsets.UTF_8.newDecoder()
+            .onMalformedInput(CodingErrorAction.REPORT)
+            .onUnmappableCharacter(CodingErrorAction.REPORT)
+            .decode(ByteBuffer.wrap(bytes))
+            .toString()
+    } catch (e: CharacterCodingException) {
+        String(bytes, runCatching { Charset.forName("windows-1252") }.getOrDefault(Charsets.ISO_8859_1))
+    }
+}
 
 fun normalizeForSearch(text: String): String =
     spaces.replace(marks.replace(Normalizer.normalize(text.lowercase(), Normalizer.Form.NFD), ""), " ").trim()

@@ -14,6 +14,7 @@ data class ExternalPlayback(
     val positionMs: Long,
     val updatedAt: Long,
     val speed: Float = 1f,
+    val title: String? = null,
 ) {
     fun positionAt(now: Long): Long =
         (if (playing) positionMs + ((now - updatedAt) * speed).toLong() else positionMs).coerceAtLeast(0)
