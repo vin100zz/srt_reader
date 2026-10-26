@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d1015">
+<title>SRT Reader</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0d1015;
+    --panel: #161a21;
+    --raised: #1f242d;
+    --line: #2a303b;
+    --text: #e9edf2;
+    --muted: #8f99a8;
+    --accent: #ffc94a;
+    --accent-ink: #231a00;
+    --ok: #3ecf8e;
+    --bad: #ff6b5b;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  main { max-width: 560px; margin: 0 auto; padding: max(12px, env(safe-area-inset-top)) 16px 96px; }
+  header { display: flex; align-items: center; justify-content: space-between; padding: 6px 0 14px; }
+  h1 { margin: 0; font-size: 19px; }
+  h1 b { color: var(--accent); }
+  .conn { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+  .conn i { width: 8px; height: 8px; border-radius: 50%; background: var(--bad); }
+  .conn.ok i { background: var(--ok); }
+
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin: 0 0 12px; }
+  h2 { margin: 0 0 12px; font-size: 12px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+  .muted { color: var(--muted); }
+  .hint { margin: 10px 0 0; font-size: 13.5px; color: var(--muted); }
+
+  button, .btn, select, input { font: inherit; color: inherit; }
+  button, .btn {
+    display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    min-height: 48px; padding: 10px 12px;
+    border: 1px solid var(--line); border-radius: 12px; background: var(--raised);
+    cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none;
+    transition: transform .08s, background-color .15s;
+  }
+  button:active, .btn:active { transform: scale(.97); }
+  button:disabled { opacity: .45; }
+  button small { font-size: 11.5px; color: var(--muted); }
+  .big { width: 100%; min-height: 64px; font-size: 20px; font-weight: 650; }
+  .primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+  .small { min-height: 40px; font-size: 14px; margin-top: 12px; }
+  .row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+
+  .file { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .file-info { min-width: 0; display: grid; }
+  .file-info strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-info span { font-size: 13.5px; }
+  .empty .file { flex-direction: column; align-items: stretch; text-align: center; padding: 28px 16px; }
+  .empty .file .btn { min-height: 56px; background: var(--accent); color: var(--accent-ink); border-color: transparent; font-weight: 650; }
+  .empty .needs-file { display: none; }
+
+  .clock-row { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+  .sync-mode { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 13.5px; color: var(--muted); }
+  .sync-mode i { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+  .following .sync-mode { color: var(--text); }
+  .following .sync-mode i { background: var(--ok); }
+  .following .manual-only, body:not(.following) .follow-only { display: none; }
+  .clock { font-size: 44px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
+  .play { background: #2a3140; }
+  .screen {
+    margin-top: 14px; padding: 14px; min-height: 80px; border-radius: 12px; background: #000;
+    display: grid; align-content: center; text-align: center;
+  }
+  .screen .label { font-size: 11px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .now { font-size: 18px; font-weight: 500; }
+
+  .sync-title { font-size: 20px; }
+  .sync-next { max-width: 100%; font-size: 14px; font-weight: 500; opacity: .8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cues { display: grid; gap: 6px; margin-top: 12px; }
+  .cue {
+    display: grid; grid-template-columns: 58px 1fr; align-items: baseline; justify-items: start; gap: 10px;
+    min-height: 44px; padding: 9px 12px; text-align: left; font-size: 15px;
+  }
+  .cue .t { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .cue.past { opacity: .5; }
+  .cue.active { border-color: var(--accent); background: rgba(255, 201, 74, .1); }
+
+  .adj-label { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 16px 0 8px; font-weight: 600; }
+  .adj-label.first { margin-top: 0; }
+  .adj-label .muted { font-weight: 400; font-size: 13px; text-align: right; }
+  .goto { display: flex; gap: 8px; margin-top: 14px; }
+  input[type=search], .goto input, select {
+    width: 100%; min-height: 48px; padding: 10px 12px;
+    border: 1px solid var(--line); border-radius: 12px; background: var(--bg);
+  }
+  .goto input { flex: 1; min-width: 0; }
+  .goto button { flex: none; padding: 10px 18px; }
+
+  .slider { display: grid; gap: 4px; margin: 0 0 14px; }
+  .slider span { display: flex; justify-content: space-between; }
+  input[type=range] { width: 100%; height: 32px; accent-color: var(--accent); }
+  .switch { display: flex; align-items: center; gap: 12px; min-height: 44px; }
+  .switch input { flex: none; width: 22px; height: 22px; accent-color: var(--accent); }
+
+  .toast {
+    position: fixed; left: 50%; bottom: max(20px, env(safe-area-inset-bottom));
+    width: max-content; max-width: calc(100% - 32px); padding: 12px 16px; border-radius: 12px;
+    background: #2b323e; box-shadow: 0 8px 30px rgba(0, 0, 0, .45); font-size: 15px;
+    opacity: 0; transform: translate(-50%, 16px); pointer-events: none; transition: opacity .2s, transform .2s;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .toast.error { background: #5a2420; }
+  footer { padding: 4px; font-size: 13px; }
+</style>
+</head>
+<body class="empty">
+<main>
+  <header>
+    <h1><b>SRT</b> Reader</h1>
+    <span id="conn" class="conn"><i></i><span>Connexion…</span></span>
+  </header>
+
+  <section class="file">
+    <div class="file-info">
+      <strong id="fileName">Aucun fichier</strong>
+      <span id="fileMeta" class="muted">Choisis un fichier .srt pour commencer</span>
+    </div>
+    <label class="btn"><span id="pickText">Choisir un .srt</span><input id="fileInput" type="file" accept=".srt,.txt,text/plain,application/x-subrip" hidden></label>
+  </section>
+
+  <section class="needs-file">
+    <div class="clock-row">
+      <div id="clock" class="clock">0:00</div>
+      <div id="playState" class="muted">En pause</div>
+    </div>
+    <div class="sync-mode"><i></i><span id="syncMode">Synchro manuelle</span></div>
+    <button id="playBtn" class="big play">▶&nbsp; Lecture</button>
+    <div class="screen">
+      <div class="label">Sur la TV</div>
+      <div id="now" class="now">—</div>
+    </div>
+  </section>
+
+  <section class="needs-file">
+    <h2>Recaler</h2>
+    <button id="syncNext" class="big primary">
+      <span class="sync-title">C'est dit maintenant</span>
+      <span id="nextText" class="sync-next"></span>
+    </button>
+    <p class="hint">Appuie au moment où cette réplique est prononcée, ou touche une des répliques ci-dessous.</p>
+    <div id="nearby" class="cues"></div>
+  </section>
+
+  <section class="needs-file">
+    <h2>Ajuster</h2>
+    <div class="adj-label first"><span>Sous-titres</span><span id="offset" class="muted"></span></div>
+    <div class="row">
+      <button data-nudge="-500">−0,5 s<small>plus tôt</small></button>
+      <button data-nudge="-100">−0,1 s</button>
+      <button data-nudge="100">+0,1 s</button>
+      <button data-nudge="500">+0,5 s<small>plus tard</small></button>
+    </div>
+    <div class="manual-only">
+      <div class="adj-label"><span>Film</span><span class="muted">si tu avances ou recules dans l'appli</span></div>
+      <div class="row">
+        <button data-seek="-60000">−1 min</button>
+        <button data-seek="-10000">−10 s</button>
+        <button data-seek="10000">+10 s</button>
+        <button data-seek="60000">+1 min</button>
+      </div>
+      <form id="gotoForm" class="goto">
+        <input id="gotoInput" inputmode="decimal" placeholder="Position du film, ex. 1:02:30" autocomplete="off">
+        <button>Aller</button>
+      </form>
+    </div>
+    <p id="followHint" class="hint follow-only"></p>
+  </section>
+
+  <section class="needs-file">
+    <h2>Chercher une réplique</h2>
+    <input id="search" type="search" placeholder="Quelques mots de la réplique…" autocomplete="off">
+    <div id="results" class="cues"></div>
+  </section>
+
+  <section class="needs-file">
+    <h2>Vitesse</h2>
+    <select id="scale" aria-label="Vitesse des sous-titres"></select>
+    <p class="hint">Si le décalage grandit au fil du film, recale une 2ᵉ fois au moins 15 min plus loin : la vitesse se corrige toute seule.</p>
+    <button id="resetSync" class="small">Remettre le recalage à zéro</button>
+  </section>
+
+  <section>
+    <h2>Affichage sur la TV</h2>
+    <label class="slider"><span>Taille du texte <b id="fontSizeVal"></b></span><input type="range" id="fontSize" data-key="fontSize" min="14" max="64" step="1"></label>
+    <label class="slider"><span>Hauteur depuis le bas <b id="bottomVal"></b></span><input type="range" id="bottom" data-key="bottom" min="0" max="60" step="1"></label>
+    <label class="slider"><span>Fond derrière le texte <b id="bgVal"></b></span><input type="range" id="bg" data-key="bg" min="0" max="100" step="5"></label>
+    <label class="switch"><input type="checkbox" id="visible" data-key="visible"><span>Afficher les sous-titres</span></label>
+    <label class="switch"><input type="checkbox" id="mediaKeys" data-key="mediaKeys"><span>Lecture/Pause pilote aussi l'appli vidéo</span></label>
+    <label class="switch"><input type="checkbox" id="follow" data-key="follow"><span>Suivre automatiquement l'appli vidéo</span></label>
+    <p id="accessHint" class="hint" hidden>Synchro automatique indisponible : l'appli n'a pas accès aux notifications de la TV. Relance <b>install.cmd</b> depuis le PC.</p>
+  </section>
+
+  <footer class="muted">Pense à couper les sous-titres de Netflix ou Canal+, sinon ils se superposent aux tiens.</footer>
+</main>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script>
+'use strict';
+const $ = (sel) => document.querySelector(sel);
+
+let generation = 0;      // incrémenté à chaque commande : on ignore les états demandés avant
+let polling = false;
+let lastMessageId = null;
+let nearbyKey = '';
+let ratiosKey = '';
+const lastEdit = {};     // dernier geste sur un réglage, pour ne pas l'écraser pendant qu'on le bouge
+
+// ---------- formatage ----------
+const pad = (n) => String(n).padStart(2, '0');
+function fmt(ms) {
+  const s = Math.floor(Math.max(0, ms) / 1000);
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+  return h ? `${h}:${pad(m)}:${pad(s % 60)}` : `${m}:${pad(s % 60)}`;
+}
+function signedSeconds(ms) {
+  const v = Math.abs(ms / 1000).toFixed(1).replace('.', ',');
+  return (ms > 0 ? '+' : ms < 0 ? '−' : '') + v + ' s';
+}
+function esc(s) {
+  return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+// Garde l'italique/gras du SRT, retire les autres balises
+function rich(s) {
+  return esc(s)
+    .replace(/&lt;(\/?)(i|b|u)&gt;/gi, '<$1$2>')
+    .replace(/&lt;\/?font.*?&gt;/gi, '')
+    .replace(/\n/g, '<br>');
+}
+const plain = (s) => s.replace(/<[^>]*>/g, '').replace(/\n/g, ' ');
+
+// ---------- échanges avec la TV ----------
+async function api(path, options) {
+  let res;
+  try {
+    res = await fetch(path, options);
+  } catch {
+    throw new Error('TV injoignable');
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Erreur ${res.status}`);
+  return data;
+}
+
+async function poll() {
+  if (polling) return;
+  polling = true;
+  const gen = generation;
+  try {
+    const s = await api('/api/state');
+    setOnline(true);
+    if (gen === generation) render(s);
+  } catch {
+    setOnline(false);
+  } finally {
+    polling = false;
+  }
+}
+
+async function cmd(a, params = {}) {
+  generation++;
+  try {
+    render(await api('/api/cmd?' + new URLSearchParams({ a, ...params }), { method: 'POST' }));
+    setOnline(true);
+  } catch (e) {
+    toast(e.message, true);
+  }
+}
+
+// ---------- affichage ----------
+function render(s) {
+  document.body.classList.toggle('empty', !s.loaded);
+  $('#fileName').textContent = s.loaded ? (s.name || 'Sous-titres') : 'Aucun fichier';
+  $('#fileMeta').textContent = s.loaded ? `${s.count} répliques` : 'Choisis un fichier .srt pour commencer';
+  $('#pickText').textContent = s.loaded ? 'Changer' : 'Choisir un .srt';
+
+  document.body.classList.toggle('following', !!s.following);
+  $('#clock').textContent = fmt(s.position);
+  $('#playState').textContent = s.playing ? 'En lecture' : 'En pause';
+  $('#syncMode').textContent = s.following ? `Synchro automatique avec ${s.following}` : 'Synchro manuelle';
+  $('#followHint').textContent = s.following
+    ? `Les pauses et les sauts faits dans ${s.following} sont suivis automatiquement.` : '';
+  $('#accessHint').hidden = s.mediaAccess || !s.settings.follow;
+  $('#playBtn').innerHTML = s.playing ? '❚❚&nbsp; Pause' : '▶&nbsp; Lecture';
+  $('#now').innerHTML = !s.settings.visible ? '<span class="muted">Sous-titres masqués</span>'
+    : s.currentText ? rich(s.currentText) : '<span class="muted">—</span>';
+
+  $('#syncNext').disabled = !s.next;
+  $('#nextText').textContent = s.next ? `« ${plain(s.next.text)} »` : 'Plus de réplique après ce point';
+  $('#offset').textContent = 'décalage ' + signedSeconds(s.offset);
+
+  renderNearby(s);
+  renderRatios(s);
+  renderSettings(s.settings);
+
+  if (lastMessageId === null) {
+    lastMessageId = s.messageId;
+  } else if (s.messageId !== lastMessageId) {
+    lastMessageId = s.messageId;
+    if (s.message) toast(s.message);
+  }
+}
+
+function cueButton(c, cls) {
+  return `<button class="cue ${cls}" data-i="${c.i}"><span class="t">${fmt(c.t)}</span><span>${rich(c.text)}</span></button>`;
+}
+
+function renderNearby(s) {
+  // Reconstruit la liste seulement si elle change, pour ne pas perdre un appui en cours
+  const key = s.nearby.map((c) => `${c.i}@${c.t}`).join(',') + '|' + s.current.join(',');
+  if (key === nearbyKey) return;
+  nearbyKey = key;
+  const current = new Set(s.current);
+  const nextIndex = s.next ? s.next.i : Infinity;
+  $('#nearby').innerHTML = s.nearby
+    .map((c) => cueButton(c, current.has(c.i) ? 'active' : c.i < nextIndex ? 'past' : ''))
+    .join('');
+}
+
+function renderRatios(s) {
+  const sel = $('#scale');
+  const key = s.ratios.map((r) => r.v).join(',');
+  if (key !== ratiosKey) {
+    ratiosKey = key;
+    sel.innerHTML = s.ratios
+      .map((r) => `<option value="${r.v}">${esc(r.label)} (×${r.v.toFixed(4).replace('.', ',')})</option>`)
+      .join('') + '<option value="" hidden></option>';
+  }
+  if (document.activeElement === sel) return;
+  const match = s.ratios.find((r) => Math.abs(r.v - s.scale) < 1e-9);
+  if (match) {
+    sel.value = String(match.v);
+  } else {
+    sel.lastElementChild.textContent = s.scaleLabel;
+    sel.value = '';
+  }
+}
+
+const units = { fontSize: '', bottom: ' %', bg: ' %' };
+function renderSettings(st) {
+  for (const key of Object.keys(units)) {
+    const el = $('#' + key);
+    if (Date.now() - (lastEdit[key] || 0) > 1500) el.value = st[key];
+    $('#' + key + 'Val').textContent = el.value + units[key];
+  }
+  for (const key of ['visible', 'mediaKeys', 'follow']) {
+    if (Date.now() - (lastEdit[key] || 0) > 1500) $('#' + key).checked = st[key];
+  }
+}
+
+function setOnline(ok) {
+  const c = $('#conn');
+  c.classList.toggle('ok', ok);
+  c.querySelector('span').textContent = ok ? 'TV connectée' : 'TV injoignable';
+}
+
+let toastTimer;
+function toast(text, isError = false) {
+  const t = $('#toast');
+  t.textContent = text;
+  t.classList.toggle('error', isError);
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+const buzz = () => navigator.vibrate && navigator.vibrate(12);
+
+// ---------- fichier .srt ----------
+function decode(buf) {
+  const b = new Uint8Array(buf);
+  if (b[0] === 0xff && b[1] === 0xfe) return new TextDecoder('utf-16le').decode(buf);
+  if (b[0] === 0xfe && b[1] === 0xff) return new TextDecoder('utf-16be').decode(buf);
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(buf);
+  } catch {
+    return new TextDecoder('windows-1252').decode(buf); // vieux fichiers « ANSI »
+  }
+}
+
+$('#fileInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const text = decode(await file.arrayBuffer());
+    generation++;
+    render(await api('/api/load', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain; charset=utf-8', 'X-File-Name': encodeURIComponent(file.name) },
+      body: text,
+    }));
+  } catch (err) {
+    toast(err.message, true);
+  } finally {
+    e.target.value = '';
+  }
+});
+
+// ---------- commandes ----------
+$('#playBtn').addEventListener('click', () => { buzz(); cmd('toggle'); });
+$('#syncNext').addEventListener('click', () => { buzz(); cmd('syncnext'); });
+for (const list of ['#nearby', '#results']) {
+  $(list).addEventListener('click', (e) => {
+    const b = e.target.closest('.cue');
+    if (!b) return;
+    buzz();
+    cmd('sync', { i: b.dataset.i });
+  });
+}
+document.querySelectorAll('[data-nudge]').forEach((b) => b.addEventListener('click', () => cmd('nudge', { ms: b.dataset.nudge })));
+document.querySelectorAll('[data-seek]').forEach((b) => b.addEventListener('click', () => cmd('seek', { ms: b.dataset.seek })));
+
+function parseTime(v) {
+  const parts = v.trim().split(/[:.,\s]+/).filter(Boolean).map(Number);
+  if (!parts.length || parts.length > 3 || parts.some((n) => !Number.isInteger(n) || n < 0)) return null;
+  while (parts.length < 3) parts.unshift(0);
+  return ((parts[0] * 60 + parts[1]) * 60 + parts[2]) * 1000;
+}
+$('#gotoForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const ms = parseTime($('#gotoInput').value);
+  if (ms === null) return toast('Format attendu : 1:02:30 ou 45:10', true);
+  cmd('seekto', { ms });
+  $('#gotoInput').blur();
+});
+
+let searchTimer;
+$('#search').addEventListener('input', (e) => {
+  clearTimeout(searchTimer);
+  const q = e.target.value.trim();
+  searchTimer = setTimeout(async () => {
+    if (q.length < 2) {
+      $('#results').innerHTML = '';
+      return;
+    }
+    try {
+      const hits = await api('/api/search?q=' + encodeURIComponent(q));
+      $('#results').innerHTML = hits.length ? hits.map((c) => cueButton(c, '')).join('')
+        : '<p class="hint">Aucune réplique trouvée.</p>';
+    } catch (err) {
+      toast(err.message, true);
+    }
+  }, 250);
+});
+
+$('#scale').addEventListener('change', (e) => {
+  if (e.target.value) cmd('scale', { v: e.target.value });
+  e.target.blur();
+});
+$('#resetSync').addEventListener('click', () => {
+  if (confirm('Remettre le décalage et la vitesse à zéro ?')) cmd('resetsync');
+});
+
+const pendingSetting = {};
+document.querySelectorAll('input[type=range]').forEach((el) => {
+  el.addEventListener('input', () => {
+    const key = el.dataset.key;
+    lastEdit[key] = Date.now();
+    $('#' + key + 'Val').textContent = el.value + units[key];
+    clearTimeout(pendingSetting[key]);
+    pendingSetting[key] = setTimeout(() => cmd('set', { k: key, v: el.value }), 120);
+  });
+});
+document.querySelectorAll('input[type=checkbox]').forEach((el) => {
+  el.addEventListener('change', () => {
+    lastEdit[el.dataset.key] = Date.now();
+    cmd('set', { k: el.dataset.key, v: el.checked ? 1 : 0 });
+  });
+});
+
+setInterval(poll, 400);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
+poll();
+</script>
+</body>
+</html>

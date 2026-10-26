@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg">#FF0D1015</color>
+    <color name="raised">#FF2A3140</color>
+    <color name="accent">#FFFFC94A</color>
+    <color name="accent_ink">#FF231A00</color>
+    <color name="muted">#FF8F99A8</color>
+
+    <style name="AppTheme" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/bg</item>
+        <item name="android:colorAccent">@color/accent</item>
+    </style>
+
+    <!-- Bouton bien visible quand il a le focus de la télécommande -->
+    <style name="TvButton">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">52dp</item>
+        <item name="android:paddingStart">24dp</item>
+        <item name="android:paddingEnd">24dp</item>
+        <item name="android:background">@drawable/tv_button</item>
+        <item name="android:textColor">@color/tv_button_text</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:stateListAnimator">@null</item>
+        <item name="android:focusable">true</item>
+    </style>
+</resources>

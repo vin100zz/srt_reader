@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SRT Reader</string>
+    <string name="tagline">Tes sous-titres .srt par-dessus Netflix, Canal+, Prime Video…</string>
+
+    <string name="status_permission">Il faut d’abord autoriser l’affichage par-dessus les autres applis.</string>
+    <string name="status_starting">Démarrage…</string>
+    <string name="status_no_network">Pas de réseau : connecte la TV au Wi-Fi ou en Ethernet.</string>
+    <string name="status_ready">Sur ton téléphone (même réseau), ouvre :</string>
+    <string name="status_stopped">Sous-titres arrêtés.</string>
+
+    <string name="help_usage">1. Ouvre cette adresse ou scanne le QR code, puis envoie ton fichier .srt.\n2. Lance ton film dans Netflix, Canal+… et coupe leurs sous-titres.\n3. Pilote tout depuis le téléphone : Lecture/Pause, puis « C’est dit maintenant ».</string>
+    <string name="help_permission_adb">Si le bouton n’ouvre rien, lance depuis ton PC :\nadb shell appops set %1$s SYSTEM_ALERT_WINDOW allow\npuis reviens sur cet écran.</string>
+
+    <string name="grant">Autoriser</string>
+    <string name="start">Démarrer les sous-titres</string>
+    <string name="stop">Arrêter les sous-titres</string>
+    <string name="qr_description">QR code de la page de contrôle</string>
+
+    <string name="channel_name">Sous-titres</string>
+    <string name="notification_text">Sous-titres affichés par-dessus les autres applis</string>
+</resources>
